@@ -1,4 +1,4 @@
-weather-to-icalendar - Serves a dynamic ICS iCalendar file based on API data returnedby [AccuWeather](https://developer.accuweather.com/)
+weather-to-icalendar - Serves a dynamic ICS iCalendar file based on API data returned by [AccuWeather](https://developer.accuweather.com/)
 
 # Usage
 * Runs on http://localhost:8080/ by default
