@@ -16,4 +16,4 @@ The project is a hobbyist effort intended for my personal use
 * Requests to the forecast API are cached for 60 minutes - set your iCal client accordingly
   * AccuWeather API allows for 50 free calls per 24-hour period
 * Requests to the location API are cached indefinitely after the first request for a given postal code
-  * No way to programatically invalidate the cache, however the location key should not change
+  * No function included to invalidate the cache, however the location key should not change
