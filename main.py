@@ -1,11 +1,7 @@
 import re
+import os
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from create_ical import output_icalendar
-
-hostName = "localhost"
-serverPort = 8080
-
-re_zip = re.compile(r"^(\d{5})[-\s]?(?:\d{4})?$")
 
 
 class SharedCalendarServer(BaseHTTPRequestHandler):
@@ -13,8 +9,10 @@ class SharedCalendarServer(BaseHTTPRequestHandler):
 
         http_request = self.path.split("/")[1:]
 
-        if re.match(re_zip, http_request[0]):
-            zip_code = re.match(re_zip, http_request[0])[1]
+        re_zipcode = re.compile(r"^(\d{5})[-\s]?(?:\d{4})?$")
+
+        if re.match(re_zipcode, http_request[0]):
+            zip_code: str = re.match(re_zipcode, http_request[0])[1]
 
             if len(http_request) > 1 and http_request[1] == "metric":
                 metric_mode = True
@@ -36,8 +34,10 @@ class SharedCalendarServer(BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    webServer = HTTPServer((hostName, serverPort), SharedCalendarServer)
-    print(f"Server started http://{hostName}:{serverPort}")
+    server_port = os.environ.get("PORT", "5000")
+    server_address = ("", server_port)
+    webServer = HTTPServer(server_address, SharedCalendarServer)
+    print(f"Server started on port {server_port}")
 
     try:
         webServer.serve_forever()
