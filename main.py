@@ -22,20 +22,20 @@ class SharedCalendarServer(BaseHTTPRequestHandler):
             http_response = output_icalendar(zip_code, metric_mode)
 
             self.send_response(200)
-            self.send_header("Content-Type", "text/calendar")
+            self.send_header("Content-Type", "text/calendar; charset=utf-8")
             self.end_headers()
             self.wfile.write(http_response)
 
         else:
             self.send_response(400)
-            self.send_header("Content-Type", "text/plain")
+            self.send_header("Content-Type", "text/plain; charset=utf-8")
             self.end_headers()
             self.wfile.write(bytes(f"Invalid request: {self.path}", "utf-8"))
 
 
 if __name__ == "__main__":
     server_port = os.environ.get("PORT", "5000")
-    server_address = ("", server_port)
+    server_address = ("", int(server_port))
     webServer = HTTPServer(server_address, SharedCalendarServer)
     print(f"Server started on port {server_port}")
 

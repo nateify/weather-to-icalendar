@@ -4,7 +4,7 @@ weather-to-icalendar - Serves a dynamic ICS iCalendar file based on API data ret
 * Runs on http://localhost:8080/ by default
 * Input a US postal code as path
   * Example: http://localhost:8080/90210
-* Metric units can enabled by adding /metric to the URL
+* Metric units can be enabled by appending /metric to the URL
 
 # Limitations
 The project is a hobbyist effort intended for my personal use
@@ -16,4 +16,4 @@ The project is a hobbyist effort intended for my personal use
 * Requests to the forecast API are cached for 60 minutes - set your iCal client accordingly
   * AccuWeather API allows for 50 free calls per 24-hour period
 * Requests to the location API are cached indefinitely after the first request for a given postal code
-  * No function included to invalidate the cache, however the location key should not change
+  * No function is included to invalidate the cache, however the location key should not change
