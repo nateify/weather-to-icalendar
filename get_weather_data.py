@@ -109,8 +109,12 @@ def output_weather_data(zip_code, metric):
     forecast_timezone = datetime.strptime(forecast_timezone_str, "%z")
 
     # created_at returns a datetime which does not have tzinfo set but should be UTC
-    # This less elegant method prevents the need for pytz
-    forecast_cache_last_updated = forecast_session.created_at.replace(tzinfo=datetime.strptime("+0000", "%z").tzinfo)
+    # create_at is None when the cache is initialized
+    if not forecast_session.created_at:
+        forecast_cache_last_updated = datetime.utcnow()
+    else:
+        forecast_cache_last_updated = forecast_session.created_at.replace(tzinfo=datetime.strptime("+0000", "%z").tzinfo)
+
     forecast_cache_last_updated = forecast_cache_last_updated.astimezone(forecast_timezone.tzinfo)
 
     for forecast in forecast_json["DailyForecasts"]:
