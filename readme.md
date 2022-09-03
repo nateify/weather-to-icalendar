@@ -1,9 +1,9 @@
 weather-to-icalendar - Serves a dynamic ICS iCalendar file based on API data returned by [AccuWeather](https://developer.accuweather.com/)
 
 # Usage
-* Runs on http://localhost:8080/ by default
+* Runs on http://localhost:5000/ by default
 * Input a US postal code as path
-  * Example: http://localhost:8080/90210
+  * Example: http://localhost:5000/90210
 * Metric units can be enabled by appending /metric to the URL
 
 # Limitations
