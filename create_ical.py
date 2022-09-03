@@ -1,13 +1,15 @@
-from get_weather_data import output_weather_data
-from icalendar import Calendar, Event
 from datetime import datetime
+
+from icalendar import Calendar, Event
+
+from get_weather_data import output_weather_data
 
 
 def output_icalendar(zip_code, metric):
     cal = Calendar()
 
     cal.add("prodid", "-//nateify//Weather to iCalendar//EN")
-    cal.add("version", "2.0")
+    cal.add("version", "3.0")
     cal.add("calscale", "GREGORIAN")
     cal.add("method", "PUBLISH")
     cal.add("X-WR-CALNAME", "Weather")

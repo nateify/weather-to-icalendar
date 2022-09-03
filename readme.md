@@ -7,13 +7,12 @@ weather-to-icalendar - Serves a dynamic ICS iCalendar file based on API data ret
 * Metric units can be enabled by appending /metric to the URL
 
 # Limitations
-The project is a hobbyist effort intended for my personal use
+I created this project for personal use. No support is provided and no contributions are accepted.
 
-* Hard coded for postal code input limited to the United States
-* Additional details and summary provided for rainfall but not snowfall
-* No sunrise/sunset data displayed
-* No moon phase data displayed
+* Only accepts US postal codes
+* Only daytime conditions are displayed (relative to the timezone that the zipcode resides in)
+* Preciptation data is only displayed for rain, but the API supports snow, ice, and mixed
 * Requests to the forecast API are cached for 60 minutes - set your iCal client accordingly
-  * AccuWeather API allows for 50 free calls per 24-hour period
-* Requests to the location API are cached indefinitely after the first request for a given postal code
+* Requests to the location API are cached indefinitely
   * No function is included to invalidate the cache, however the location key should not change
+* [http.server](https://docs.python.org/3/library/http.server.html) module is used for simplicity - uses HTTP 1.0 and no compression

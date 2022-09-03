@@ -1,6 +1,7 @@
-import re
 import os
+import re
 from http.server import BaseHTTPRequestHandler, HTTPServer
+
 from create_ical import output_icalendar
 
 
@@ -32,9 +33,14 @@ class SharedCalendarServer(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(bytes(f"Invalid request: {self.path}", "utf-8"))
 
+    def do_HEAD(self):
+        self.send_response(200)
+        self.send_header("Content-Type", "text/calendar; charset=utf-8")
+        self.end_headers()
+
 
 if __name__ == "__main__":
-    server_port = os.environ.get("PORT", "5000")
+    server_port = os.getenv("PORT", "8080")
     server_address = ("", int(server_port))
     webServer = HTTPServer(server_address, SharedCalendarServer)
     print(f"Server started on port {server_port}")
