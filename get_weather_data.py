@@ -1,5 +1,6 @@
 import json
 import os
+import inspect
 from datetime import datetime, timedelta
 
 from requests_cache import CachedSession
@@ -140,7 +141,7 @@ def output_weather_data(zip_code, metric):
         if forecast["Day"]["HasPrecipitation"] and forecast["Day"]["PrecipitationType"] == "Rain":
             summary += f" ({forecast['Day']['Rain']['Value']} {rain_unit})"
 
-        description = f"""\
+        description = f"""
         Temperature unit: {j_temp['Minimum']['Value']:.0f}°{temp_unit} … {j_temp['Maximum']['Value']:.0f}°{temp_unit}
         Heat index: {j_heat['Minimum']['Value']:.0f}°{temp_unit} … {j_heat['Maximum']['Value']:.0f}°{temp_unit}
         
@@ -149,7 +150,7 @@ def output_weather_data(zip_code, metric):
         
         Precipitation: {forecast['Day']['Rain']['Value']} {rain_unit}
         Length of precipitation: {s_precip_length}
-        Chance of rain: {forecast['Day']['PrecipitationProbability']:.0f}%
+        Chance of rain: {forecast['Day']['RainProbability']:.0f}%
         Cloud cover: {forecast['Day']['CloudCover']:.0f}%
         
         Wind: {j_wind['Speed']['Value']} {wind_unit} {wind_symbols[j_wind_dir]} ({j_wind_dir}°)
@@ -158,10 +159,9 @@ def output_weather_data(zip_code, metric):
         \u00A9 {datetime.today().year} AccuWeather, Inc.
         
         Updated: {datetime.strftime(forecast_cache_last_updated, '%a, %d %b %Y %I:%M%p %Z')}
-        
-        Additional information
-        {forecast['Link']}
         """
+
+        description = inspect.cleandoc(description)
 
         weather_data_dict[forecast["EpochDate"]] = [summary, description, forecast["Link"]]
 
