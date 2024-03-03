@@ -1,2 +1,2 @@
-icalendar~=4.1.0
-requests_cache~=0.9.6
+icalendar~=5.0.11
+requests_cache~=1.2.0

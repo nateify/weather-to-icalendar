@@ -1,7 +1,7 @@
 import json
-import os
-import inspect
+import re
 from datetime import datetime, timedelta
+from inspect import cleandoc
 
 from requests_cache import CachedSession
 
@@ -17,7 +17,7 @@ class RangeDict(dict):
             return super().__getitem__(item)
 
 
-forecast_icons = {
+forecast_icon = {
     1: "\u2600\uFE0F",
     2: "\u2600\uFE0F",
     3: "\U0001f324\uFE0F",
@@ -48,7 +48,7 @@ forecast_icons = {
     32: "\U0001f343",
 }
 
-wind_symbols = RangeDict(
+wind_symbol = RangeDict(
     {
         range(0, 23): "\u2B06",  # N
         range(23, 68): "\u2197",  # NE
@@ -62,25 +62,27 @@ wind_symbols = RangeDict(
     }
 )
 
-api_key = os.environ["ACCUWEATHER_API_KEY"]
-print("Loaded AccuWeather API key")
 
-api_url_prefix = "http://dataservice.accuweather.com"
+def generate_weather_data(zip_code, metric, api_key):
+    precipitation_types = ["Rain", "Snow", "Ice"]
 
+    re_zip = re.compile(r"^(\d{5})[-\s]?(?:\d{4})?$")
 
-def output_weather_data(zip_code, metric):
+    if zip_match := re.match(re_zip, zip_code.strip()):
+        zip_code = zip_match[1]
+    else:
+        raise (f"{zip_code} is not a valid ZIP code", ValueError)
+
+    api_url_prefix = "http://dataservice.accuweather.com"
+
     if metric:
         temp_unit = "C"
-        rain_unit = "mm"
+        precip_unit = "mm"
         wind_unit = "km/h"
     else:
         temp_unit = "F"
-        rain_unit = "in"
+        precip_unit = "in"
         wind_unit = "mph"
-
-    metric = str(metric).lower()
-
-    weather_data_dict = dict()
 
     api_session = CachedSession("request_cache", old_data_on_error=True)
 
@@ -93,9 +95,11 @@ def output_weather_data(zip_code, metric):
 
     location_key = json.loads(location_session.text)[0]["Key"]
 
+    metric_str = str(metric).lower()
+
     forecast_session = api_session.request(
         "GET",
-        f"{api_url_prefix}/forecasts/v1/daily/5day/{location_key}?apikey={api_key}&language=en-us&details=true&metric={metric}",
+        f"{api_url_prefix}/forecasts/v1/daily/5day/{location_key}?apikey={api_key}&language=en-us&details=true&metric={metric_str}",
         expire_after=3600,
     )
 
@@ -118,51 +122,103 @@ def output_weather_data(zip_code, metric):
 
     forecast_cache_last_updated = forecast_cache_last_updated.astimezone(forecast_timezone.tzinfo)
 
+    weather_data_dict = dict()
+
     for forecast in forecast_json["DailyForecasts"]:
-        j_temp = forecast["Temperature"]
-        j_heat = forecast["RealFeelTemperature"]
-        j_air = next(x for x in forecast["AirAndPollen"] if x["Name"] == "AirQuality")
-        j_uv = next(x for x in forecast["AirAndPollen"] if x["Name"] == "UVIndex")
-        j_wind = forecast["Day"]["Wind"]
-        j_wind_dir = j_wind["Direction"]["Degrees"]
-        j_wind_gust = forecast["Day"]["WindGust"]
-        j_wind_gust_dir = j_wind_gust["Direction"]["Degrees"]
+        day_cast = forecast["Day"]
+        temp = forecast["Temperature"]
+        rfeel = forecast["RealFeelTemperature"]
+        air_qual = next(x for x in forecast["AirAndPollen"] if x["Name"] == "AirQuality")
+        uv = next(x for x in forecast["AirAndPollen"] if x["Name"] == "UVIndex")
 
-        dt_precip_length = timedelta(hours=forecast["Day"]["HoursOfPrecipitation"]).total_seconds()
-        hours, remainder = divmod(dt_precip_length, 3600)
-        minutes = divmod(remainder, 60)[0]
-        s_precip_length = f"{hours:.0f} h"
-        if minutes > 0:
-            s_precip_length += f" {minutes:.0f} m"
+        wind = day_cast["Wind"]
+        wind_dir = wind["Direction"]["Degrees"]
+        wind_gust = day_cast["WindGust"]
+        wind_gust_dir = wind_gust["Direction"]["Degrees"]
 
-        summary = f"{forecast_icons[forecast['Day']['Icon']]} {j_temp['Maximum']['Value']:.0f}° | {j_temp['Minimum']['Value']:.0f}°, {forecast['Day']['IconPhrase']}"
+        summary = f"{forecast_icon[day_cast['Icon']]} {temp['Maximum']['Value']:.0f}° | {temp['Minimum']['Value']:.0f}°, {day_cast['IconPhrase']}"
 
-        # Rain depth in parantheses
-        if forecast["Day"]["HasPrecipitation"] and forecast["Day"]["PrecipitationType"] == "Rain":
-            summary += f" ({forecast['Day']['Rain']['Value']} {rain_unit})"
+        precip_description = ""
+
+        has_precip = day_cast["HasPrecipitation"]
+
+        if has_precip:
+            precip_type = day_cast["PrecipitationType"]
+
+            if precip_type == "Mixed":
+                for precip_type in precipitation_types:
+                    precip_prob = day_cast[f"{precip_type}Probability"]
+
+                    if not precip_prob > 1:
+                        continue
+
+                    precip_seconds = timedelta(hours=day_cast[f"HoursOf{precip_type}"]).total_seconds()
+                    hours, remainder = divmod(precip_seconds, 3600)
+                    minutes = divmod(remainder, 60)[0]
+                    precip_length = f"{hours:.0f} h"
+                    if minutes > 0:
+                        precip_length += f" {minutes:.0f} m"
+
+                    precip_value = day_cast[precip_type]["Value"]
+                    precip_prob = day_cast[f"{precip_type}Probability"]
+
+                    precip_description += (
+                        f"{precip_type}: {precip_value} {precip_unit}\n"
+                        f"Length of {precip_type.lower()}: {precip_length}\n"
+                        f"Chance of {precip_type.lower()}: {precip_prob:.0f}%\n"
+                    )
+
+                selected_precip = {k: v["Value"] for k, v in day_cast.items() if k in precipitation_types}
+
+                max_key = max(selected_precip, key=selected_precip.get)
+
+                if selected_precip[max_key] > 0:
+                    precip_value = selected_precip[max_key]
+                    summary += f" ({precip_value} {precip_unit})"
+
+            else:
+                precip_seconds = timedelta(hours=day_cast[f"HoursOf{precip_type}"]).total_seconds()
+                hours, remainder = divmod(precip_seconds, 3600)
+                minutes = divmod(remainder, 60)[0]
+                precip_length = f"{hours:.0f} h"
+                if minutes > 0:
+                    precip_length += f" {minutes:.0f} m"
+
+                precip_value = day_cast[precip_type]["Value"]
+                precip_prob = day_cast[f"{precip_type}Probability"]
+
+                precip_description = (
+                    f"{precip_type}: {precip_value} {precip_unit}\n"
+                    f"Length of {precip_type.lower()}: {precip_length}\n"
+                    f"Chance of {precip_type.lower()}: {precip_prob:.0f}%"
+                )
+
+                summary += f" ({precip_value} {precip_unit})"
+        else:
+            for precip_type in precipitation_types:
+                precip_prob = day_cast[f"{precip_type}Probability"]
+                if precip_prob > 1:
+                    precip_description += f"Chance of {precip_type}: {precip_prob:.0f}%\n"
+
+        precip_descr_condition = f"{precip_description.rstrip()}\n" if precip_description else ""
 
         description = f"""
-        Temperature unit: {j_temp['Minimum']['Value']:.0f}°{temp_unit} … {j_temp['Maximum']['Value']:.0f}°{temp_unit}
-        Heat index: {j_heat['Minimum']['Value']:.0f}°{temp_unit} … {j_heat['Maximum']['Value']:.0f}°{temp_unit}
+        Temperature: {temp['Minimum']['Value']:.0f}°{temp_unit} … {temp['Maximum']['Value']:.0f}°{temp_unit}
+        RealFeel\u00AE: {rfeel['Minimum']['Value']:.0f}°{temp_unit} … {rfeel['Maximum']['Value']:.0f}°{temp_unit}
         
-        Air quality: {j_air['Category']} ({j_air['Value']})
-        UV index: {j_uv['Category']} ({j_uv['Value']})
+        Air quality: {air_qual['Category']} ({air_qual['Value']})
+        UV index: {uv['Category']} ({uv['Value']})
         
-        Precipitation: {forecast['Day']['Rain']['Value']} {rain_unit}
-        Length of precipitation: {s_precip_length}
-        Chance of rain: {forecast['Day']['RainProbability']:.0f}%
-        Cloud cover: {forecast['Day']['CloudCover']:.0f}%
+        {precip_descr_condition}Cloud cover: {day_cast['CloudCover']:.0f}%
         
-        Wind: {j_wind['Speed']['Value']} {wind_unit} {wind_symbols[j_wind_dir]} ({j_wind_dir}°)
-        Wind gust: {j_wind_gust['Speed']['Value']} {wind_unit} {wind_symbols[j_wind_gust_dir]} ({j_wind_gust_dir}°)
+        Wind: {wind['Speed']['Value']} {wind_unit} {wind_symbol[wind_dir]} ({wind_dir}°)
+        Wind gust: {wind_gust['Speed']['Value']} {wind_unit} {wind_symbol[wind_gust_dir]} ({wind_gust_dir}°)
         
         \u00A9 {datetime.today().year} AccuWeather, Inc.
         
         Updated: {datetime.strftime(forecast_cache_last_updated, '%a, %d %b %Y %I:%M%p %Z')}
         """
 
-        description = inspect.cleandoc(description)
-
-        weather_data_dict[forecast["EpochDate"]] = [summary, description, forecast["Link"]]
+        weather_data_dict[forecast["EpochDate"]] = [summary, cleandoc(description.strip()), forecast["Link"]]
 
     return weather_data_dict
