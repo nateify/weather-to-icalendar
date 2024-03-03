@@ -34,7 +34,7 @@ class SharedCalendarServer(BaseHTTPRequestHandler):
             weather_opts = {
                 "zip_code": query_components.get("zip", None),
                 "metric": query_components.get("metric", False),
-                "api_key": query_components.get("api_key", os.environ["ACCUWEATHER_API_KEY"]),
+                "api_key": query_components.get("api_key", os.environ.get("ACCUWEATHER_API_KEY")),
             }
 
             weather_opts = flat_opts(weather_opts)
