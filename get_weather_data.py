@@ -3,7 +3,14 @@ import re
 from datetime import datetime, timedelta
 from inspect import cleandoc
 
+from requests.exceptions import HTTPError
 from requests_cache import CachedSession
+
+
+class HTTPErrorWithContent(Exception):
+    def __init__(self, status_code, content):
+        self.status_code = status_code
+        self.content = content
 
 
 class RangeDict(dict):
@@ -17,63 +24,53 @@ class RangeDict(dict):
             return super().__getitem__(item)
 
 
-forecast_icon = {
-    1: "\u2600\uFE0F",
-    2: "\u2600\uFE0F",
-    3: "\U0001f324\uFE0F",
-    4: "\U0001f324\uFE0F",
-    5: "\u2600\uFE0F",
-    6: "\U0001f325\uFE0F",
-    7: "\u2601\uFE0F",
-    8: "\u2601\uFE0F",
-    11: "\U0001f32b\uFE0F",
-    12: "\U0001f327\uFE0F",
-    13: "\U0001f326\uFE0F",
-    14: "\U0001f326\uFE0F",
-    15: "\u26C8\uFE0F",
-    16: "\u26C8\uFE0F",
-    17: "\U0001f326\uFE0F",
-    18: "\U0001f327\uFE0F",
-    19: "\U0001f328\uFE0F",
-    20: "\U0001f328\uFE0F",
-    21: "\U0001f328\uFE0F",
-    22: "\u2744\uFE0F",
-    23: "\u2744\uFE0F",
-    24: "\u2744\uFE0F",
-    25: "\U0001f328\uFE0F",
-    26: "\U0001f327\uFE0F",
-    29: "\U0001f327\uFE0F",
-    30: "\U0001f525",
-    31: "\U0001f9ca",
-    32: "\U0001f343",
-}
-
-wind_symbol = RangeDict(
-    {
-        range(0, 23): "\u2B06",  # N
-        range(23, 68): "\u2197",  # NE
-        range(68, 113): "\u27A1",  # E
-        range(113, 158): "\u2198",  # SE
-        range(158, 203): "\u2B07",  # S
-        range(203, 248): "\u2199",  # SW
-        range(248, 293): "\u2B05",  # W
-        range(293, 338): "\u2196",  # NW
-        range(338, 361): "\u2B06",  # N
-    }
-)
-
-
 def generate_weather_data(zip_code, metric, api_key):
+    forecast_icon = {
+        1: "\u2600\uFE0F",
+        2: "\u2600\uFE0F",
+        3: "\U0001f324\uFE0F",
+        4: "\U0001f324\uFE0F",
+        5: "\u2600\uFE0F",
+        6: "\U0001f325\uFE0F",
+        7: "\u2601\uFE0F",
+        8: "\u2601\uFE0F",
+        11: "\U0001f32b\uFE0F",
+        12: "\U0001f327\uFE0F",
+        13: "\U0001f326\uFE0F",
+        14: "\U0001f326\uFE0F",
+        15: "\u26C8\uFE0F",
+        16: "\u26C8\uFE0F",
+        17: "\U0001f326\uFE0F",
+        18: "\U0001f327\uFE0F",
+        19: "\U0001f328\uFE0F",
+        20: "\U0001f328\uFE0F",
+        21: "\U0001f328\uFE0F",
+        22: "\u2744\uFE0F",
+        23: "\u2744\uFE0F",
+        24: "\u2744\uFE0F",
+        25: "\U0001f328\uFE0F",
+        26: "\U0001f327\uFE0F",
+        29: "\U0001f327\uFE0F",
+        30: "\U0001f525",
+        31: "\U0001f9ca",
+        32: "\U0001f343",
+    }
+
+    wind_symbol = RangeDict(
+        {
+            range(0, 23): "\u2B06",  # N
+            range(23, 68): "\u2197",  # NE
+            range(68, 113): "\u27A1",  # E
+            range(113, 158): "\u2198",  # SE
+            range(158, 203): "\u2B07",  # S
+            range(203, 248): "\u2199",  # SW
+            range(248, 293): "\u2B05",  # W
+            range(293, 338): "\u2196",  # NW
+            range(338, 361): "\u2B06",  # N
+        }
+    )
+
     precipitation_types = ["Rain", "Snow", "Ice"]
-
-    re_zip = re.compile(r"^(\d{5})[-\s]?(?:\d{4})?$")
-
-    if zip_match := re.match(re_zip, zip_code.strip()):
-        zip_code = zip_match[1]
-    else:
-        raise (f"{zip_code} is not a valid ZIP code", ValueError)
-
-    api_url_prefix = "http://dataservice.accuweather.com"
 
     if metric:
         temp_unit = "C"
@@ -84,28 +81,46 @@ def generate_weather_data(zip_code, metric, api_key):
         precip_unit = "in"
         wind_unit = "mph"
 
-    api_session = CachedSession("request_cache", old_data_on_error=True)
+    api_uri = "http://dataservice.accuweather.com"
 
-    location_session = api_session.request(
-        "GET",
-        f"{api_url_prefix}/locations/v1/postalcodes/US/search?apikey={api_key}&q={zip_code}&language=en-us",
-        expire_after=-1,
-    )
-    print("Cache used for location data:", location_session.from_cache)
+    re_zip = re.compile(r"^(\d{5})[-\s]?(?:\d{4})?$")
 
-    location_key = json.loads(location_session.text)[0]["Key"]
+    if zip_match := re.match(re_zip, zip_code.strip()):
+        zip_code = zip_match[1]
+    else:
+        raise HTTPError(400)
 
-    metric_str = str(metric).lower()
+    api_session = CachedSession("request_cache", stale_if_error=timedelta(hours=12))
 
-    forecast_session = api_session.request(
-        "GET",
-        f"{api_url_prefix}/forecasts/v1/daily/5day/{location_key}?apikey={api_key}&language=en-us&details=true&metric={metric_str}",
-        expire_after=3600,
-    )
+    try:
+        location_resp = api_session.get(
+            f"{api_uri}/locations/v1/postalcodes/US/search?apikey={api_key}&q={zip_code}&language=en-us",
+            expire_after=-1,
+        )
+        location_resp.raise_for_status()
 
-    print("Cache used for forecast data:", forecast_session.from_cache)
+        location_key = json.loads(location_resp.text)[0]["Key"]
 
-    forecast_json = json.loads(forecast_session.text)
+        print(f"Got location_key {location_key} from {zip_code}")
+
+        metric_str = str(metric).lower()
+
+        forecast_resp = api_session.get(
+            f"{api_uri}/forecasts/v1/daily/5day/{location_key}?apikey={api_key}&language=en-us&details=true&metric={metric_str}",
+            expire_after=3600,
+        )
+        forecast_resp.raise_for_status()
+    except HTTPError as http_err:
+        if http_err.response.headers["Content-Type"] == "application/json":
+            error_content = http_err.response.json()
+        else:
+            error_content = http_err.response.content.decode()
+        raise HTTPErrorWithContent(http_err.response.status_code, error_content) from None
+
+    print(f"Cache was used for location data: {location_resp.from_cache}")
+    print(f"Cache was used for forecast data: {forecast_resp.from_cache}")
+
+    forecast_json = json.loads(forecast_resp.text)
 
     # Timezone local to the location of the forecast
     forecast_timezone_str = forecast_json["Headline"]["EffectiveDate"][-6:]
@@ -113,12 +128,10 @@ def generate_weather_data(zip_code, metric, api_key):
 
     # created_at returns a datetime which does not have tzinfo set but should be UTC
     # create_at is None when the cache is initialized
-    if not forecast_session.created_at:
+    if not forecast_resp.created_at:
         forecast_cache_last_updated = datetime.utcnow()
     else:
-        forecast_cache_last_updated = forecast_session.created_at.replace(
-            tzinfo=datetime.strptime("+0000", "%z").tzinfo
-        )
+        forecast_cache_last_updated = forecast_resp.created_at.replace(tzinfo=datetime.strptime("+0000", "%z").tzinfo)
 
     forecast_cache_last_updated = forecast_cache_last_updated.astimezone(forecast_timezone.tzinfo)
 
