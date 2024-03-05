@@ -1,7 +1,6 @@
 import json
 import re
 from datetime import datetime, timedelta
-from inspect import cleandoc
 
 from requests.exceptions import HTTPError
 from requests_cache import CachedSession
@@ -22,6 +21,18 @@ class RangeDict(dict):
             raise KeyError(item)
         else:
             return super().__getitem__(item)
+
+
+def clean_description(s):
+    lines = [line.lstrip() for line in s.splitlines()]
+    # Collapse multiple blank lines, catches when precipitation description is a blank string
+    cleaned_lines = []
+    for line in lines:
+        if line == "" and (not cleaned_lines or cleaned_lines[-1] != ""):
+            cleaned_lines.append(line)
+        elif line != "":
+            cleaned_lines.append(line)
+    return "\n".join(cleaned_lines)
 
 
 def generate_weather_data(zip_code, metric, api_key):
@@ -213,16 +224,18 @@ def generate_weather_data(zip_code, metric, api_key):
                 if precip_prob > 1:
                     precip_description += f"Chance of {precip_type}: {precip_prob:.0f}%\n"
 
-        precip_descr_condition = f"{precip_description.rstrip()}\n" if precip_description else ""
+        # rstrip is needed to catch extra trailing newline on mixed precipitation
+        precip_descr_condition = f"{precip_description.rstrip()}" if precip_description else ""
 
-        description = f"""
+        description = f"""\
         Temperature: {temp['Minimum']['Value']:.0f}°{temp_unit} … {temp['Maximum']['Value']:.0f}°{temp_unit}
         RealFeel\u00AE: {rfeel['Minimum']['Value']:.0f}°{temp_unit} … {rfeel['Maximum']['Value']:.0f}°{temp_unit}
         
         Air quality: {air_qual['Category']} ({air_qual['Value']})
         UV index: {uv['Category']} ({uv['Value']})
         
-        {precip_descr_condition}Cloud cover: {day_cast['CloudCover']:.0f}%
+        {precip_descr_condition}
+        Cloud cover: {day_cast['CloudCover']:.0f}%
         
         Wind: {wind['Speed']['Value']} {wind_unit} {wind_symbol[wind_dir]} ({wind_dir}°)
         Wind gust: {wind_gust['Speed']['Value']} {wind_unit} {wind_symbol[wind_gust_dir]} ({wind_gust_dir}°)
@@ -232,6 +245,6 @@ def generate_weather_data(zip_code, metric, api_key):
         Updated: {datetime.strftime(forecast_cache_last_updated, '%a, %d %b %Y %I:%M%p %Z')}
         """
 
-        weather_data_dict[forecast["EpochDate"]] = [summary, cleandoc(description.strip()), forecast["Link"]]
+        weather_data_dict[forecast["EpochDate"]] = [summary, clean_description(description.rstrip()), forecast["Link"]]
 
     return weather_data_dict
