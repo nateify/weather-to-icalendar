@@ -204,9 +204,14 @@ def generate_weather_data(zip_code, metric, api_key):
                 precip_seconds = timedelta(hours=day_cast[f"HoursOf{precip_type}"]).total_seconds()
                 hours, remainder = divmod(precip_seconds, 3600)
                 minutes = divmod(remainder, 60)[0]
-                precip_length = f"{hours:.0f} h"
+
+                precip_parts = []
+                if hours > 0:
+                    precip_parts.append(f"{hours:.0f} h")
                 if minutes > 0:
-                    precip_length += f" {minutes:.0f} m"
+                    precip_parts.append(f"{minutes:.0f} m")
+
+                precip_length = " ".join(precip_parts)
 
                 precip_value = day_cast[precip_type]["Value"]
                 precip_prob = day_cast[f"{precip_type}Probability"]
