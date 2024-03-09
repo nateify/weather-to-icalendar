@@ -146,7 +146,7 @@ def generate_weather_data(zip_code, metric, api_key):
 
     forecast_cache_last_updated = forecast_cache_last_updated.astimezone(forecast_timezone.tzinfo)
 
-    weather_data_dict = dict()
+    weather_data_dict = {"LastUpdated": forecast_cache_last_updated, "ForecastEntries": []}
 
     for forecast in forecast_json["DailyForecasts"]:
         day_cast = forecast["Day"]
@@ -250,6 +250,8 @@ def generate_weather_data(zip_code, metric, api_key):
         Updated: {datetime.strftime(forecast_cache_last_updated, '%a, %d %b %Y %I:%M%p %Z')}
         """
 
-        weather_data_dict[forecast["EpochDate"]] = [summary, clean_description(description.rstrip()), forecast["Link"]]
+        weather_data_dict["ForecastEntries"].append(
+            [forecast["EpochDate"], summary, clean_description(description.rstrip()), forecast["Link"]]
+        )
 
     return weather_data_dict

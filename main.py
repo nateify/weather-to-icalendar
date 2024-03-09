@@ -1,7 +1,10 @@
 import json
 import os
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from time import mktime
 from urllib.parse import parse_qs, urlencode, urlparse
+from wsgiref.handlers import format_date_time
+from datetime import timedelta
 
 from requests.exceptions import HTTPError
 
@@ -46,8 +49,16 @@ class SharedCalendarServer(BaseHTTPRequestHandler):
 
                 http_response = return_calendar_content(weather_data)
 
+                last_update_dt = weather_data["LastUpdated"]
+                expires_dt = last_update_dt + timedelta(hours=1)
+                lu_http_date = format_date_time(mktime(last_update_dt.timetuple()))
+                expr_http_date = format_date_time(mktime(expires_dt.timetuple()))
+
                 self.send_response(200)
                 self.send_header("Content-Type", "text/calendar; charset=utf-8")
+                self.send_header("Last-Modified", lu_http_date)
+                self.send_header("Expires", expr_http_date)
+                self.send_header("Cache-Control", "public, max-age=3600, stale-if-error=43200")
                 self.end_headers()
                 self.wfile.write(http_response)
             except HTTPErrorWithContent as http_err:
@@ -123,6 +134,10 @@ class SharedCalendarServer(BaseHTTPRequestHandler):
             """
 
             self.wfile.write(bytes(html, "utf-8"))
+        elif path == "/favicon.ico":
+            self.send_response(200)
+            self.send_header("Content-Type", "image/x-icon")
+            self.end_headers()
         else:
             self.send_response(404)
             self.send_header("Content-Type", "text/plain; charset=utf-8")
