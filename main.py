@@ -38,6 +38,7 @@ class SharedCalendarServer(BaseHTTPRequestHandler):
                 "zip_code": query_components.get("zip", None),
                 "metric": query_components.get("metric", False),
                 "api_key": query_components.get("api_key", os.environ.get("ACCUWEATHER_API_KEY")),
+                "show_location": query_components.get("show_location", False),
             }
 
             weather_opts = flat_opts(weather_opts)
@@ -122,11 +123,16 @@ class SharedCalendarServer(BaseHTTPRequestHandler):
                 <form action="/link" method="get">
                     Accuweather API Key: <input type="text" name="api_key"><br>
                     Zip Code: <input type="text" name="zip" pattern="\\d{5}" inputmode="numeric" required><br>
-                    Units: 
-                    <select name="metric">
-                        <option value="false">Imperial</option>
-                        <option value="true">Metric</option>
-                    </select>
+                    Units: <br>
+                    <input type="radio" id="imperial" name="metric" value="false" checked>
+                    <label for="imperial">Imperial</label><br>
+                    <input type="radio" id="metric" name="metric" value="true">
+                    <label for="metric">Metric</label><br>
+                    Show Location: <br>
+                    <input type="radio" id="yes" name="show_location" value="true">
+                    <label for="yes">Yes</label><br>
+                    <input type="radio" id="no" name="show_location" value="false" checked>
+                    <label for="no">No</label><br>
                     <input type="submit" value="Submit">
                 </form>
             </body>

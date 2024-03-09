@@ -35,7 +35,7 @@ def clean_description(s):
     return "\n".join(cleaned_lines)
 
 
-def generate_weather_data(zip_code, metric, api_key):
+def generate_weather_data(zip_code, metric, api_key, show_location):
     forecast_icon = {
         1: "\u2600\uFE0F",
         2: "\u2600\uFE0F",
@@ -110,7 +110,16 @@ def generate_weather_data(zip_code, metric, api_key):
         )
         location_resp.raise_for_status()
 
-        location_key = json.loads(location_resp.text)[0]["Key"]
+        location_json = json.loads(location_resp.text)[0]
+
+        location_key = location_json["Key"]
+
+        location_string = f"{location_json['EnglishName']}, {location_json['AdministrativeArea']['ID']}"
+
+        if show_location:
+            location_geo = (location_json["GeoPosition"]["Latitude"], location_json["GeoPosition"]["Longitude"])
+        else:
+            location_geo = None
 
         print(f"Got location_key {location_key} from {zip_code}")
 
@@ -146,7 +155,12 @@ def generate_weather_data(zip_code, metric, api_key):
 
     forecast_cache_last_updated = forecast_cache_last_updated.astimezone(forecast_timezone.tzinfo)
 
-    weather_data_dict = {"LastUpdated": forecast_cache_last_updated, "ForecastEntries": []}
+    weather_data_dict = {
+        "LastUpdated": forecast_cache_last_updated,
+        "ForecastEntries": [],
+        "LocationString": location_string,
+        "LocationGeo": location_geo,
+    }
 
     for forecast in forecast_json["DailyForecasts"]:
         day_cast = forecast["Day"]
