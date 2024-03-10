@@ -101,7 +101,7 @@ def generate_weather_data(zip_code, metric, api_key, show_location):
     else:
         raise HTTPError(400)
 
-    api_session = CachedSession("request_cache", stale_if_error=timedelta(hours=12))
+    api_session = CachedSession("request_cache", stale_if_error=timedelta(days=1))
 
     try:
         location_resp = api_session.get(

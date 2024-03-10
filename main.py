@@ -1,10 +1,10 @@
 import json
 import os
+from datetime import timedelta
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from time import mktime
 from urllib.parse import parse_qs, urlencode, urlparse
 from wsgiref.handlers import format_date_time
-from datetime import timedelta
 
 from requests.exceptions import HTTPError
 
@@ -14,8 +14,6 @@ from get_weather_data import HTTPErrorWithContent, generate_weather_data
 
 def flat_opts(d):
     for key, value in d.items():
-        if key == "precipitation_types":
-            continue
         if isinstance(value, list) and len(value) == 1:
             d[key] = value[0]
     return d
@@ -44,6 +42,7 @@ class SharedCalendarServer(BaseHTTPRequestHandler):
             weather_opts = flat_opts(weather_opts)
 
             weather_opts["metric"] = bool_eval(weather_opts["metric"])
+            weather_opts["show_location"] = bool_eval(weather_opts["show_location"])
 
             try:
                 weather_data = generate_weather_data(**weather_opts)
@@ -59,7 +58,7 @@ class SharedCalendarServer(BaseHTTPRequestHandler):
                 self.send_header("Content-Type", "text/calendar; charset=utf-8")
                 self.send_header("Last-Modified", lu_http_date)
                 self.send_header("Expires", expr_http_date)
-                self.send_header("Cache-Control", "public, max-age=3600, stale-if-error=43200")
+                self.send_header("Cache-Control", "public, max-age=3600, stale-if-error=86400")
                 self.end_headers()
                 self.wfile.write(http_response)
             except HTTPErrorWithContent as http_err:
