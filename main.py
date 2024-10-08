@@ -58,7 +58,7 @@ class SharedCalendarServer(BaseHTTPRequestHandler):
                 self.send_header("Content-Type", "text/calendar; charset=utf-8")
                 self.send_header("Last-Modified", lu_http_date)
                 self.send_header("Expires", expr_http_date)
-                self.send_header("Cache-Control", "public, max-age=3600, stale-if-error=86400")
+                self.send_header("Cache-Control", "public, max-age=3600, stale-while-revalidate=300, stale-if-error=86400")
                 self.end_headers()
                 self.wfile.write(http_response)
             except HTTPErrorWithContent as http_err:
