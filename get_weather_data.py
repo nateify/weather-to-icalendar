@@ -138,8 +138,8 @@ def generate_weather_data(zip_code, metric, api_key, show_location):
     )
     forecast_resp.raise_for_status()
 
-    print(f"Cache was used for location data: {location_resp.from_cache}")
-    print(f"Cache was used for forecast data: {forecast_resp.from_cache}")
+    print(f"Location data cache hit: {location_resp.from_cache}")
+    print(f"Forecast data cache hit: {forecast_resp.from_cache}")
 
     forecast_json = forecast_resp.json()
 

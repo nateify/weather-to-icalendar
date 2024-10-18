@@ -1,9 +1,9 @@
 import os
+import sys
 from datetime import timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from signal import SIGINT, signal
 from urllib.parse import parse_qs, urlencode, urlparse
-from wsgiref.handlers import format_date_time
 
 from requests.exceptions import HTTPError
 
@@ -51,8 +51,8 @@ class SharedCalendarServer(BaseHTTPRequestHandler):
 
                 last_update_dt = weather_data["LastUpdated"]
                 expires_dt = last_update_dt + timedelta(hours=1)
-                lu_http_date = format_date_time(last_update_dt.timestamp())
-                expr_http_date = format_date_time(expires_dt.timestamp())
+                lu_http_date = BaseHTTPRequestHandler.date_time_string(last_update_dt.timestamp())
+                expr_http_date = BaseHTTPRequestHandler.date_time_string(expires_dt.timestamp())
 
                 extra_headers = {
                     "Last-Modified": lu_http_date,
@@ -173,6 +173,9 @@ def shutdown_handler(signum, frame):
 
 def main():
     signal(SIGINT, shutdown_handler)
+
+    if os.getenv("PYTHON_STDOUT_TO_STDERR") == "1":
+        sys.stdout = sys.stderr
 
     if os.getenv("ACCUWEATHER_API_KEY"):
         print("Loaded ACCUWEATHER_API_KEY environment variable")
