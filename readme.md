@@ -13,4 +13,4 @@ I created this project for personal use. No support is provided and no contribut
 * Requests to the forecast API are cached for 60 minutes - set your iCal client accordingly
 * Requests to the location API are cached indefinitely
   * No function is included to invalidate the cache, however the location key should not change
-* [http.server](https://docs.python.org/3/library/http.server.html) module is used for simplicity - serves HTTP 1.0 and no compression
+* [http.server](https://docs.python.org/3/library/http.server.html) module is used for simplicity - serves HTTP 1.1 and no compression
