@@ -1,12 +1,10 @@
-import json
 import re
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
-from requests.exceptions import HTTPError
 from requests_cache import CachedSession
 
 
-class HTTPErrorWithContent(Exception):
+class SimpleHTTPError(Exception):
     def __init__(self, status_code, content):
         self.status_code = status_code
         self.content = content
@@ -35,33 +33,45 @@ def clean_description(s):
     return "\n".join(cleaned_lines)
 
 
+def validate_zip(zip_code):
+    re_zip = re.compile(r"^(\d{5})[-\s]?(?:\d{4})?$")
+    match = re_zip.match(zip_code)
+
+    if match:
+        zip5 = match.group(1)
+        if int(zip5) >= 500:
+            return zip5
+
+    return False
+
+
 def generate_weather_data(zip_code, metric, api_key, show_location):
     forecast_icon = {
-        1: "\u2600\uFE0F",
-        2: "\u2600\uFE0F",
-        3: "\U0001f324\uFE0F",
-        4: "\U0001f324\uFE0F",
-        5: "\u2600\uFE0F",
-        6: "\U0001f325\uFE0F",
-        7: "\u2601\uFE0F",
-        8: "\u2601\uFE0F",
-        11: "\U0001f32b\uFE0F",
-        12: "\U0001f327\uFE0F",
-        13: "\U0001f326\uFE0F",
-        14: "\U0001f326\uFE0F",
-        15: "\u26C8\uFE0F",
-        16: "\u26C8\uFE0F",
-        17: "\U0001f326\uFE0F",
-        18: "\U0001f327\uFE0F",
-        19: "\U0001f328\uFE0F",
-        20: "\U0001f328\uFE0F",
-        21: "\U0001f328\uFE0F",
-        22: "\u2744\uFE0F",
-        23: "\u2744\uFE0F",
-        24: "\u2744\uFE0F",
-        25: "\U0001f328\uFE0F",
-        26: "\U0001f327\uFE0F",
-        29: "\U0001f327\uFE0F",
+        1: "\u2600\ufe0f",
+        2: "\u2600\ufe0f",
+        3: "\U0001f324\ufe0f",
+        4: "\U0001f324\ufe0f",
+        5: "\u2600\ufe0f",
+        6: "\U0001f325\ufe0f",
+        7: "\u2601\ufe0f",
+        8: "\u2601\ufe0f",
+        11: "\U0001f32b\ufe0f",
+        12: "\U0001f327\ufe0f",
+        13: "\U0001f326\ufe0f",
+        14: "\U0001f326\ufe0f",
+        15: "\u26c8\ufe0f",
+        16: "\u26c8\ufe0f",
+        17: "\U0001f326\ufe0f",
+        18: "\U0001f327\ufe0f",
+        19: "\U0001f328\ufe0f",
+        20: "\U0001f328\ufe0f",
+        21: "\U0001f328\ufe0f",
+        22: "\u2744\ufe0f",
+        23: "\u2744\ufe0f",
+        24: "\u2744\ufe0f",
+        25: "\U0001f328\ufe0f",
+        26: "\U0001f327\ufe0f",
+        29: "\U0001f327\ufe0f",
         30: "\U0001f525",
         31: "\U0001f9ca",
         32: "\U0001f343",
@@ -69,15 +79,15 @@ def generate_weather_data(zip_code, metric, api_key, show_location):
 
     wind_symbol = RangeDict(
         {
-            range(0, 23): "\u2B06",  # N
+            range(0, 23): "\u2b06",  # N
             range(23, 68): "\u2197",  # NE
-            range(68, 113): "\u27A1",  # E
+            range(68, 113): "\u27a1",  # E
             range(113, 158): "\u2198",  # SE
-            range(158, 203): "\u2B07",  # S
+            range(158, 203): "\u2b07",  # S
             range(203, 248): "\u2199",  # SW
-            range(248, 293): "\u2B05",  # W
+            range(248, 293): "\u2b05",  # W
             range(293, 338): "\u2196",  # NW
-            range(338, 361): "\u2B06",  # N
+            range(338, 361): "\u2b06",  # N
         }
     )
 
@@ -94,66 +104,56 @@ def generate_weather_data(zip_code, metric, api_key, show_location):
 
     api_uri = "http://dataservice.accuweather.com"
 
-    re_zip = re.compile(r"^(\d{5})[-\s]?(?:\d{4})?$")
+    zip_code = validate_zip(zip_code)
 
-    if zip_match := re.match(re_zip, zip_code.strip()):
-        zip_code = zip_match[1]
-    else:
-        raise HTTPError(400)
+    if not zip_code:
+        raise SimpleHTTPError(400, f"Invalid ZIP code")
 
     api_session = CachedSession("request_cache", stale_if_error=timedelta(days=1))
 
-    try:
-        location_resp = api_session.get(
-            f"{api_uri}/locations/v1/postalcodes/US/search?apikey={api_key}&q={zip_code}&language=en-us",
-            expire_after=-1,
-        )
-        location_resp.raise_for_status()
+    location_resp = api_session.get(
+        f"{api_uri}/locations/v1/postalcodes/US/search?apikey={api_key}&q={zip_code}&language=en-us",
+        expire_after=-1,
+    )
+    location_resp.raise_for_status()
 
-        location_json = json.loads(location_resp.text)[0]
+    location_json = location_resp.json()[0]
 
-        location_key = location_json["Key"]
+    location_key = location_json["Key"]
 
-        location_string = f"{location_json['EnglishName']}, {location_json['AdministrativeArea']['ID']}"
+    location_string = f"{location_json['EnglishName']}, {location_json['AdministrativeArea']['ID']}"
 
-        if show_location:
-            location_geo = (location_json["GeoPosition"]["Latitude"], location_json["GeoPosition"]["Longitude"])
-        else:
-            location_geo = None
+    if show_location:
+        location_geo = (location_json["GeoPosition"]["Latitude"], location_json["GeoPosition"]["Longitude"])
+    else:
+        location_geo = None
 
-        print(f"Got location_key {location_key} from {zip_code}")
+    print(f"Got location_key {location_key} from {zip_code}")
 
-        metric_str = str(metric).lower()
+    metric_str = str(metric).lower()
 
-        forecast_resp = api_session.get(
-            f"{api_uri}/forecasts/v1/daily/5day/{location_key}?apikey={api_key}&language=en-us&details=true&metric={metric_str}",
-            expire_after=3600,
-        )
-        forecast_resp.raise_for_status()
-    except HTTPError as http_err:
-        if http_err.response.headers["Content-Type"] == "application/json":
-            error_content = http_err.response.json()
-        else:
-            error_content = http_err.response.content.decode()
-        raise HTTPErrorWithContent(http_err.response.status_code, error_content) from None
+    forecast_resp = api_session.get(
+        f"{api_uri}/forecasts/v1/daily/5day/{location_key}?apikey={api_key}&language=en-us&details=true&metric={metric_str}",
+        expire_after=3600,
+    )
+    forecast_resp.raise_for_status()
 
     print(f"Cache was used for location data: {location_resp.from_cache}")
     print(f"Cache was used for forecast data: {forecast_resp.from_cache}")
 
-    forecast_json = json.loads(forecast_resp.text)
+    forecast_json = forecast_resp.json()
 
-    # Timezone local to the location of the forecast
+    # Forecast local timezone
     forecast_timezone_str = forecast_json["Headline"]["EffectiveDate"][-6:]
-    forecast_timezone = datetime.strptime(forecast_timezone_str, "%z")
+    forecast_timezone = datetime.strptime(forecast_timezone_str, "%z").tzinfo
 
-    # created_at returns a datetime which does not have tzinfo set but should be UTC
-    # create_at is None when the cache is initialized
+    # created_at is None when cache is first initialized
     if not forecast_resp.created_at:
-        forecast_cache_last_updated = datetime.utcnow()
+        forecast_cache_last_updated = datetime.now(timezone.utc)
     else:
-        forecast_cache_last_updated = forecast_resp.created_at.replace(tzinfo=datetime.strptime("+0000", "%z").tzinfo)
+        forecast_cache_last_updated = forecast_resp.created_at.replace(tzinfo=timezone.utc)
 
-    forecast_cache_last_updated = forecast_cache_last_updated.astimezone(forecast_timezone.tzinfo)
+    forecast_cache_last_updated = forecast_cache_last_updated.astimezone(forecast_timezone)
 
     weather_data_dict = {
         "LastUpdated": forecast_cache_last_updated,
@@ -248,7 +248,7 @@ def generate_weather_data(zip_code, metric, api_key, show_location):
 
         description = f"""\
         Temperature: {temp['Minimum']['Value']:.0f}°{temp_unit} … {temp['Maximum']['Value']:.0f}°{temp_unit}
-        RealFeel\u00AE: {rfeel['Minimum']['Value']:.0f}°{temp_unit} … {rfeel['Maximum']['Value']:.0f}°{temp_unit}
+        RealFeel\u00ae: {rfeel['Minimum']['Value']:.0f}°{temp_unit} … {rfeel['Maximum']['Value']:.0f}°{temp_unit}
         
         Air quality: {air_qual['Category']} ({air_qual['Value']})
         UV index: {uv['Category']} ({uv['Value']})
@@ -259,7 +259,7 @@ def generate_weather_data(zip_code, metric, api_key, show_location):
         Wind: {wind['Speed']['Value']} {wind_unit} {wind_symbol[wind_dir]} ({wind_dir}°)
         Wind gust: {wind_gust['Speed']['Value']} {wind_unit} {wind_symbol[wind_gust_dir]} ({wind_gust_dir}°)
         
-        \u00A9 {datetime.today().year} AccuWeather, Inc.
+        \u00a9 {datetime.today().year} AccuWeather, Inc.
         
         Updated: {datetime.strftime(forecast_cache_last_updated, '%a, %d %b %Y %I:%M%p %Z')}
         """
