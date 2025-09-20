@@ -1,8 +1,7 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
+from uuid import uuid4
 
 from icalendar import Calendar, Event
-
-from get_weather_data import generate_weather_data
 
 
 def return_calendar_content(weather_data_dict):
@@ -24,9 +23,7 @@ def return_calendar_content(weather_data_dict):
     cal.add("X-APPLE-CALENDAR-COLOR", "#ffdc00")
 
     for forecast_data in weather_data_dict["ForecastEntries"]:
-        forecast_timestamp = forecast_data[0]
-        forecast_datetime = datetime.fromtimestamp(forecast_timestamp)
-        forecast_datetime_midnight = forecast_datetime.replace(hour=0, minute=0, second=0, microsecond=0)
+        forecast_datetime = forecast_data[0]
 
         event = Event()
         event.add("X-MICROSOFT-CDO-ALLDAYEVENT", "TRUE")
@@ -39,11 +36,11 @@ def return_calendar_content(weather_data_dict):
         event.add("CATEGORIES", "Weather")
         event.add("summary", forecast_data[1])
         event.add("description", forecast_data[2])
-        event.add("url", forecast_data[3])
-        event.add("uid", forecast_datetime_midnight.timestamp())
-        event.add("dtstart", forecast_datetime.date())
-        event.add("dtend", (forecast_datetime + timedelta(days=1)).date())
-        event.add("dtstamp", forecast_datetime_midnight)
+        event.add("url", "https://open-meteo.com/")
+        event.add("uid", str(uuid4()))
+        event.add("dtstart", forecast_datetime)
+        event.add("dtend", (forecast_datetime + timedelta(days=1)))
+        event.add("dtstamp", weather_data_dict["LastUpdated"])
         event.add("LAST-MODIFIED", weather_data_dict["LastUpdated"])
         if geo:
             event.add("LOCATION", location)
