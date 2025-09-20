@@ -174,7 +174,7 @@ def generate_weather_data(zip_code: str, metric: bool, show_location: bool) -> d
         """
 
         weather_data_dict["ForecastEntries"].append(
-            (forecast["date"], summary, clean_description(description).rstrip())
+            (forecast["date"], summary, clean_description(description))
         )
 
     return weather_data_dict
