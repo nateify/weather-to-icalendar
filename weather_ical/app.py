@@ -1,14 +1,12 @@
-import os
-import sys
 from datetime import timedelta
 from urllib.parse import urlencode
 
-from bottle import Bottle, HTTPError, request, response, run
+from bottle import Bottle, HTTPError, request, response
 from requests.exceptions import HTTPError as RequestsHTTPError
 
-from create_ical import return_calendar_content
-from get_weather_data import generate_weather_data
 from weather_ical.data.client import SimpleHTTPError
+from weather_ical.ical_generator import create_calendar
+from weather_ical.service import generate_weather_data
 
 
 def bool_eval(value) -> bool:
@@ -30,7 +28,7 @@ def weather_calendar():
     try:
         weather_data = generate_weather_data(**weather_opts)
 
-        calendar_content = return_calendar_content(weather_data)
+        calendar_content = create_calendar(weather_data)
 
         last_update_dt = weather_data["LastUpdated"]
         expires_dt = last_update_dt + timedelta(hours=1)
@@ -120,18 +118,3 @@ def index():
 def favicon():
     response.content_type = "image/x-icon"
     return ""
-
-
-def main():
-    if os.getenv("PYTHON_STDOUT_TO_STDERR") == "1":
-        sys.stdout = sys.stderr
-
-    server_port = int(os.getenv("PORT", 8080))
-    server_address = os.getenv("HOST_ADDRESS", "127.0.0.1")
-
-    print(f"Server started on {server_address}:{server_port}")
-    run(app, host=server_address, port=server_port, debug=False)
-
-
-if __name__ == "__main__":
-    main()

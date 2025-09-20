@@ -1,0 +1,37 @@
+line-length = 120
+[lint]
+preview = true
+explicit-preview-rules = true
+future-annotations = true
+extend-select = [
+    "A",
+    "C4",
+    "DTZ",
+    "ISC",
+    "ICN",
+    "RET",
+    "SIM",
+    "PTH",
+    "UP",
+    "ARG",
+    "N",
+    "FURB",
+    "B005",
+    "B014",
+    "B016",
+    "B026",
+    "B905",
+    "PIE808",
+    "PIE810",
+    "PLR1722",
+    "PLR2044",
+    "PLR5501",
+    "PLR1733",
+    "RUF021",
+    "RUF059",
+    "RUF013",
+]
+ignore = [
+    "PTH123",
+    "UP017"
+]

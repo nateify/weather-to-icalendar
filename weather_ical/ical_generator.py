@@ -4,7 +4,7 @@ from uuid import uuid4
 from icalendar import Calendar, Event
 
 
-def return_calendar_content(weather_data_dict):
+def create_calendar(weather_data_dict):
     location = weather_data_dict["LocationString"]
     geo = weather_data_dict["LocationGeo"]
 

@@ -1,0 +1,12 @@
+[project]
+name = "weather-to-icalendar"
+version = "3.0"
+requires-python = ">=3.13"
+dependencies = [
+    "bottle>=0.13.4",
+    "icalendar>=6.3.1",
+    "numpy>=2.3.3",
+    "openmeteo-requests>=1.7.2",
+    "polars>=1.33.1",
+    "requests-cache>=1.2.1",
+]
