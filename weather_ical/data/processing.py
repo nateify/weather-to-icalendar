@@ -110,6 +110,7 @@ def aggregate_daily_data(df, end_date):
             pl.col("uv_index").max().alias("uv_index_max"),
             pl.col("weather_code").max().alias("wmo"),
             pl.col("us_aqi").count().alias("hours_count"),
+            pl.col("is_day").sum().alias("daylight_hours"),
         )
         .sort("date")
     )
@@ -133,6 +134,7 @@ def round_final_data(df):
         pl.col("vector_avg_wind_direction_10m").round(0).cast(pl.Int32),
         pl.col("uv_index_max").round(0).cast(pl.Int32),
         pl.col("wmo").cast(pl.Int32),
+        pl.col("daylight_hours").cast(pl.Int32),
     )
 
 

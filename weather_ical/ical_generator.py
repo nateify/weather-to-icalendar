@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import timedelta, datetime, UTC
 from uuid import uuid4
 
 from icalendar import Calendar, Event
@@ -40,7 +40,7 @@ def create_calendar(weather_data_dict):
         event.add("uid", str(uuid4()))
         event.add("dtstart", forecast_datetime)
         event.add("dtend", (forecast_datetime + timedelta(days=1)))
-        event.add("dtstamp", weather_data_dict["LastUpdated"])
+        event.add("dtstamp", datetime.now(UTC))
         event.add("LAST-MODIFIED", weather_data_dict["LastUpdated"])
         if geo:
             event.add("LOCATION", location)

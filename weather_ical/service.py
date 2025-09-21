@@ -87,6 +87,7 @@ def generate_weather_data(zip_code: str, metric: bool, show_location: bool) -> d
             "uv_index",
             "uv_index_clear_sky",
             "weather_code",
+            "is_day",
         ],
         "minutely_15": "precipitation",
         "timezone": "auto",
@@ -142,12 +143,20 @@ def generate_weather_data(zip_code: str, metric: bool, show_location: bool) -> d
         temp_min = forecast["temperature_min"]
         adj_temp_max = forecast["apparent_temperature_max"]
         adj_temp_min = forecast["apparent_temperature_min"]
-        wmo = WMO_MAP[forecast["wmo"]]
+        wmo_code = forecast["wmo"]
+        wmo = WMO_MAP[wmo_code]
+        weather_description = wmo[0]
+        weather_icon = wmo[1]
         aqi = forecast["aqi_max"]
         uvi = forecast["uv_index_max"]
         wind_dir = forecast["vector_avg_wind_direction_10m"]
 
-        summary = f"{wmo[1]} {temp_max:.0f}° | {temp_min:.0f}°, {wmo[0]}"
+        if wmo_code in [0, 1] and forecast["daylight_hours"] == 0:
+            weather_description = weather_description.replace("Sunny", "Clear")
+            weather_description = weather_description.replace("sunny", "clear")
+            weather_icon = "\U0001f319\ufe0f"
+
+        summary = f"{weather_icon} {temp_max:.0f}° | {temp_min:.0f}°, {weather_description}"
 
         precip_description, max_precipitation = format_precipitation_description(forecast, precip_cutoff, precip_unit)
 
@@ -173,8 +182,6 @@ def generate_weather_data(zip_code: str, metric: bool, show_location: bool) -> d
         Updated: {datetime.strftime(forecast_cache_last_updated, "%a, %d %b %Y %I:%M%p")} {tz_abbreviation}
         """
 
-        weather_data_dict["ForecastEntries"].append(
-            (forecast["date"], summary, clean_description(description))
-        )
+        weather_data_dict["ForecastEntries"].append((forecast["date"], summary, clean_description(description)))
 
     return weather_data_dict
