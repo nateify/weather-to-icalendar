@@ -46,6 +46,9 @@ def clean_description(s: str) -> str:
 
 
 def validate_zip(zip_code: str) -> str | None:
+    if not zip_code:
+        return None
+
     re_zip = re.compile(r"^(\d{5})[-\s]?(?:\d{4})?$")
     match = re_zip.match(zip_code)
 

@@ -51,7 +51,7 @@ def generate_weather_data(zip_code: str, metric: bool, show_location: bool) -> d
     zip_code_validated = validate_zip(zip_code)
 
     if not zip_code_validated:
-        raise SimpleHTTPError(400, "Invalid ZIP code")
+        raise SimpleHTTPError(400, "Invalid or missing ZIP code")
 
     lat, lon, location_string = get_location_from_zip(zip_code_validated)
     location_geo = (lat, lon) if show_location else None

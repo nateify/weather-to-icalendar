@@ -20,7 +20,7 @@ app = Bottle()
 @app.route("/weather")
 def weather_calendar():
     weather_opts = {
-        "zip_code": request.query.get("zip", None),
+        "zip_code": request.query.get("zip", ""),
         "metric": bool_eval(request.query.get("metric", False)),
         "show_location": bool_eval(request.query.get("show_location", False)),
     }
