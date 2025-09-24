@@ -1,7 +1,10 @@
-from typing import Any
+from typing import Any, cast, TYPE_CHECKING
 
 import openmeteo_requests
 from requests_cache import CachedSession
+
+if TYPE_CHECKING:
+    from niquests import Session
 
 
 class SimpleHTTPError(Exception):
@@ -16,9 +19,9 @@ class WeatherClient:
     def __init__(self, cache_name: str = "request_cache", expire_after: int = 3600):
         self.cache_info: dict[str, Any] = {}
         self.session = self._create_session(cache_name, expire_after)
-        self.openmeteo = openmeteo_requests.Client(session=self.session)
+        self.openmeteo = openmeteo_requests.Client(session=cast("Session", cast("object", self.session)))
 
-    def _capture_cache_metadata(self, response, *args, **kwargs):
+    def _capture_cache_metadata(self, response, *args, **kwargs):  # noqa: ARG002
         self.cache_info.clear()
 
         if hasattr(response, "created_at"):

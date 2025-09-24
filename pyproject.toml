@@ -1,6 +1,6 @@
 [project]
 name = "weather-to-icalendar"
-version = "3.0"
+version = "3.0.1"
 requires-python = ">=3.13"
 dependencies = [
     "bottle>=0.13.4",

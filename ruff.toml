@@ -16,6 +16,8 @@ extend-select = [
     "ARG",
     "N",
     "FURB",
+    "PYI",
+    "TC",
     "B005",
     "B014",
     "B016",

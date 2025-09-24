@@ -61,7 +61,7 @@ def get_daily_wind_vectors(df):
         directions = day_data.select("wind_direction_10m").to_numpy().flatten()
         speeds = day_data.select("wind_speed_10m").to_numpy().flatten()
 
-        valid_mask = ~(np.isnan(directions) | np.isnan(speeds))
+        valid_mask = np.logical_not(np.isnan(directions) | np.isnan(speeds))
         if valid_mask.any():
             vector_avg = calculate_vector_wind_direction(directions[valid_mask], speeds[valid_mask])
         else:

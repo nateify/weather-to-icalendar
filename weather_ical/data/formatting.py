@@ -54,7 +54,9 @@ def validate_zip(zip_code: str) -> str | None:
 
     if match:
         zip5 = match.group(1)
-        if int(zip5) >= 500:
+
+        # Naive check for valid ZIP code numbers
+        if 501 <= int(zip5) <= 99950:
             return zip5
 
     return None

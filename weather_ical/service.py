@@ -1,5 +1,5 @@
 from datetime import UTC, datetime, timedelta, timezone
-from typing import Any
+from typing import TypedDict
 
 from requests_cache import NEVER_EXPIRE, CachedSession
 
@@ -12,6 +12,13 @@ from weather_ical.data.formatting import (
     validate_zip,
 )
 from weather_ical.data.processing import process_weather_data
+
+
+class WeatherData(TypedDict):
+    LastUpdated: datetime
+    ForecastEntries: list[tuple[datetime, str, str]]
+    LocationString: str
+    LocationGeo: tuple[float, float] | None
 
 
 def get_location_from_zip(zip_code: str) -> tuple[float, float, str]:
@@ -38,7 +45,7 @@ def get_location_from_zip(zip_code: str) -> tuple[float, float, str]:
     return location["latitude"], location["longitude"], location_name
 
 
-def generate_weather_data(zip_code: str, metric: bool, show_location: bool) -> dict[str, Any]:
+def generate_weather_data(zip_code: str, metric: bool, show_location: bool) -> WeatherData:
     if metric:
         temp_unit = "celsius"
         precip_unit = "mm"
@@ -118,7 +125,7 @@ def generate_weather_data(zip_code: str, metric: bool, show_location: bool) -> d
     else:
         forecast_cache_last_updated = weather_cache_metadata["created_at"].replace(tzinfo=UTC)
 
-    weather_data_dict = {
+    weather_data_dict: WeatherData = {
         "LastUpdated": forecast_cache_last_updated,
         "ForecastEntries": [],
         "LocationString": location_string,
